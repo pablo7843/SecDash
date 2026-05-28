@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecDash — Security Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #080b10;
+    --bg2:      #0d1117;
+    --bg3:      #111820;
+    --border:   #1e2d3d;
+    --green:    #00ff88;
+    --green2:   #00cc6a;
+    --red:      #ff3860;
+    --yellow:   #ffdd57;
+    --blue:     #3b9eff;
+    --cyan:     #00e5ff;
+    --text:     #c9d8e8;
+    --muted:    #4a6278;
+    --mono:     'Share Tech Mono', monospace;
+    --sans:     'Rajdhani', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,11,16,0.95);
+    backdrop-filter: blur(8px);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    border: 2px solid var(--green);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--green);
+    box-shadow: 0 0 12px rgba(0,255,136,0.3);
+  }
+
+  .logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #fff;
+  }
+
+  .logo-text span { color: var(--green); }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* ── LAYOUT ── */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .tab {
+    padding: 10px 22px;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    cursor: pointer;
+    border: none;
+    background: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--green);
+    border-bottom-color: var(--green);
+  }
+
+  /* ── PANELS ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── SEARCH BOX ── */
+  .search-area {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .search-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .search-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .search-input {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input::placeholder { color: var(--muted); }
+  .search-input:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(0,255,136,0.1); }
+
+  .btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--green);
+    color: #000;
+  }
+
+  .btn-primary:hover { background: var(--green2); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .btn-secondary:hover { border-color: var(--green); color: var(--green); }
+
+  /* ── API KEY SETUP ── */
+  .apikey-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .apikey-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .apikey-card h3 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    color: #fff;
+  }
+
+  .apikey-card p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    font-family: var(--mono);
+  }
+
+  .apikey-card a { color: var(--blue); text-decoration: none; }
+  .apikey-card a:hover { text-decoration: underline; }
+
+  .key-input-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .key-input {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    outline: none;
+  }
+
+  .key-input:focus { border-color: var(--green); }
+
+  .key-status {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--muted);
+    align-self: center;
+    flex-shrink: 0;
+  }
+
+  .key-status.set { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  /* ── RESULTS ── */
+  .result-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .result-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
+
+  .verdict {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .verdict.clean    { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .verdict.malicious{ background: rgba(255,56,96,0.15); color: var(--red);   border: 1px solid rgba(255,56,96,0.3); }
+  .verdict.suspicious{background: rgba(255,221,87,0.15);color: var(--yellow);border: 1px solid rgba(255,221,87,0.3); }
+  .verdict.unknown  { background: rgba(74,98,120,0.2);  color: var(--muted); border: 1px solid var(--border); }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-val.red    { color: var(--red); }
+  .stat-val.green  { color: var(--green); }
+  .stat-val.yellow { color: var(--yellow); }
+  .stat-val.blue   { color: var(--blue); }
+  .stat-val.muted  { color: var(--muted); }
+
+  .stat-label {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* ── DATA TABLE ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .data-table th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+  }
+
+  .data-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(30,45,61,0.5);
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .engine-name { color: var(--muted); }
+
+  .det-positive { color: var(--red); font-weight: 700; }
+  .det-clean    { color: var(--green); }
+  .det-unknown  { color: var(--muted); }
+
+  /* ── INFO ROWS ── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 14px;
+    background: var(--bg3);
+    border-radius: 6px;
+  }
+
+  .info-key {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .info-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    word-break: break-all;
+  }
+
+  /* ── RISK BAR ── */
+  .risk-bar-wrap {
+    margin: 16px 0;
+  }
+
+  .risk-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .risk-bar-bg {
+    height: 8px;
+    background: var(--bg3);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.8s ease;
+  }
+
+  /* ── LOADER ── */
+  .loader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--green);
+  }
+
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ERROR ── */
+  .error-box {
+    background: rgba(255,56,96,0.08);
+    border: 1px solid rgba(255,56,96,0.3);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--red);
+    margin-bottom: 16px;
+  }
+
+  /* ── HISTORY ── */
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .history-item:hover { border-color: var(--green); }
+
+  .history-type {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--bg3);
+    color: var(--muted);
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+
+  .history-target {
+    font-family: var(--mono);
+    font-size: 13px;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .history-time {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  /* ── SECTION TITLES ── */
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  .table-scroll { overflow-x: auto; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: var(--mono);
+    background: var(--bg3);
+    color: var(--muted);
+    margin: 2px;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center;
+    padding: 48px 24px;
+    font-family: var(--mono);
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 2;
+  }
+
+  .empty-icon { font-size: 32px; margin-bottom: 12px; display: block; }
+
+  @media (max-width: 640px) {
+    .apikey-grid { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+    header { padding: 12px 16px; }
+    .container { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">SD</div>
+    <span class="logo-text">SEC<span>DASH</span></span>
+  </div>
+  <div class="header-status">
+    <div class="pulse"></div>
+    MONITORING_ACTIVE
+  </div>
+</header>
+
+<div class="container">
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('ip')">ANALIZAR IP</button>
+    <button class="tab" onclick="switchTab('domain')">ANALIZAR DOMINIO</button>
+    <button class="tab" onclick="switchTab('url')">ANALIZAR URL</button>
+    <button class="tab" onclick="switchTab('history')">HISTORIAL</button>
+  </div>
+
+  <!-- PANEL: IP -->
+  <div class="panel active" id="panel-ip">
+    <div class="search-area">
+      <span class="search-label">// DIRECCIÓN IP A ANALIZAR</span>
+      <div class="search-row">
+        <input class="search-input" type="text" id="ipInput" placeholder="ej: 8.8.8.8 o 185.220.101.45" onkeydown="if(event.key==='Enter') analyzeIP()">
+        <button class="btn btn-primary" id="ipBtn" onclick="analyzeIP()">SCAN</button>
+        <button class="btn btn-secondary" onclick="clearResult('ip')">CLR</button>
+      </div>
+    </div>
+    <div id="ipResult"></div>
+  </div>
+
+  <!-- PANEL: DOMAIN -->
+  <div class="panel" id="panel-domain">
+    <div class="search-area">
+      <span class="search-label">// DOMINIO A ANALIZAR</span>
+      <div class="search-row">
+        <input class="search-input" type="text" id="domainInput" placeholder="ej: google.com o suspicious-site.ru" onkeydown="if(event.key==='Enter') analyzeDomain()">
+        <button class="btn btn-primary" id="domainBtn" onclick="analyzeDomain()">SCAN</button>
+        <button class="btn btn-secondary" onclick="clearResult('domain')">CLR</button>
+      </div>
+    </div>
+    <div id="domainResult"></div>
+  </div>
+
+  <!-- PANEL: URL -->
+  <div class="panel" id="panel-url">
+    <div class="search-area">
+      <span class="search-label">// URL A ANALIZAR</span>
+      <div class="search-row">
+        <input class="search-input" type="text" id="urlInput" placeholder="ej: https://suspicious-login.com/verify" onkeydown="if(event.key==='Enter') analyzeURL()">
+        <button class="btn btn-primary" id="urlBtn" onclick="analyzeURL()">SCAN</button>
+        <button class="btn btn-secondary" onclick="clearResult('url')">CLR</button>
+      </div>
+    </div>
+    <div id="urlResult"></div>
+  </div>
+
+  <!-- PANEL: HISTORY -->
+  <div class="panel" id="panel-history">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span class="section-title">HISTORIAL DE ANÁLISIS</span>
+      <button class="btn btn-secondary" style="font-size:11px;padding:6px 14px;" onclick="clearHistory()">LIMPIAR</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────
+// Cambia esta URL por la de tu backend en Koyeb cuando despliegues
+const API_BASE = 'http://localhost:3000/api';
+
+// ─── STATE ───────────────────────────────────────────
+let history = JSON.parse(localStorage.getItem('secdash_history') || '[]');
+
+// ─── TAB SWITCHING ───────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['ip','domain','url','history'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'history') renderHistory();
+}
+
+// ─── UTILS ───────────────────────────────────────────
+function setLoading(id, msg = 'SCANNING...') {
+  document.getElementById(id).innerHTML = `
+    <div class="loader"><div class="spinner"></div>${msg}</div>`;
+}
+
+function clearResult(type) {
+  document.getElementById(type + 'Result').innerHTML = '';
+  document.getElementById(type + 'Input').value = '';
+}
+
+function verdictClass(malicious, suspicious) {
+  if (malicious > 0) return 'malicious';
+  if (suspicious > 0) return 'suspicious';
+  return 'clean';
+}
+
+function verdictLabel(malicious, suspicious) {
+  if (malicious > 0) return '⚠ MALICIOSO';
+  if (suspicious > 0) return '⚡ SOSPECHOSO';
+  return '✔ LIMPIO';
+}
+
+function riskColor(score) {
+  if (score >= 75) return 'var(--red)';
+  if (score >= 40) return 'var(--yellow)';
+  return 'var(--green)';
+}
+
+function addToHistory(type, target, verdict) {
+  history.unshift({ type, target, verdict, time: new Date().toLocaleTimeString() });
+  if (history.length > 50) history = history.slice(0, 50);
+  localStorage.setItem('secdash_history', JSON.stringify(history));
+}
+
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  if (!history.length) {
+    el.innerHTML = `<div class="empty"><span class="empty-icon">🛡️</span>No hay análisis recientes.<br>Empieza analizando una IP, dominio o URL.</div>`;
+    return;
+  }
+  el.innerHTML = history.map(h => `
+    <div class="history-item" onclick="loadFromHistory('${h.type}','${encodeURIComponent(h.target)}')">
+      <span class="history-type">${h.type.toUpperCase()}</span>
+      <span class="history-target">${h.target}</span>
+      <span class="verdict ${h.verdict}" style="font-size:11px;padding:3px 10px;">${h.verdict.toUpperCase()}</span>
+      <span class="history-time">${h.time}</span>
+    </div>`).join('');
+}
+
+function loadFromHistory(type, target) {
+  switchTab(type);
+  document.getElementById(type + 'Input').value = decodeURIComponent(target);
+}
+
+function clearHistory() {
+  history = [];
+  localStorage.removeItem('secdash_history');
+  renderHistory();
+}
+
+// ─── API FETCH HELPER ────────────────────────────────
+async function apiFetch(url, options = {}) {
+  const res = await fetch(API_BASE + url, options);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+  return data;
+}
+
+// ─── RENDER HELPERS ──────────────────────────────────
+function renderVTStats(stats) {
+  const mal = stats.malicious || 0;
+  const sus = stats.suspicious || 0;
+  const cln = stats.undetected || 0;
+  const hrm = stats.harmless || 0;
+  const unk = stats.timeout || 0;
+  const total = mal + sus + cln + hrm + unk;
+  return `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val red">${mal}</div><div class="stat-label">Malicioso</div></div>
+      <div class="stat-card"><div class="stat-val yellow">${sus}</div><div class="stat-label">Sospechoso</div></div>
+      <div class="stat-card"><div class="stat-val green">${hrm + cln}</div><div class="stat-label">Limpio</div></div>
+      <div class="stat-card"><div class="stat-val muted">${total}</div><div class="stat-label">Total motores</div></div>
+    </div>`;
+}
+
+function renderEngineTable(results, max = 20) {
+  const entries = Object.entries(results || {});
+  const detections = entries.filter(([,v]) => v.category === 'malicious' || v.category === 'suspicious');
+  const shown = detections.slice(0, max);
+  if (!shown.length) return `<p style="font-family:var(--mono);font-size:12px;color:var(--green);padding:8px 0;">✔ Ningún motor detectó amenazas.</p>`;
+  return `
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Motor</th><th>Resultado</th><th>Categoría</th></tr></thead>
+        <tbody>
+          ${shown.map(([engine, v]) => `
+            <tr>
+              <td class="engine-name">${engine}</td>
+              <td class="${v.category === 'malicious' ? 'det-positive' : 'det-unknown'}">${v.result || '—'}</td>
+              <td><span class="verdict ${v.category === 'malicious' ? 'malicious' : 'suspicious'}" style="font-size:10px;padding:2px 8px;">${v.category}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    ${detections.length > max ? `<p style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:8px;">... y ${detections.length - max} detecciones más.</p>` : ''}`;
+}
+
+// ─── ANALYZE IP ──────────────────────────────────────
+async function analyzeIP() {
+  const ip = document.getElementById('ipInput').value.trim();
+  if (!ip) return;
+
+  setLoading('ipResult', `ANALIZANDO IP: ${ip}...`);
+  document.getElementById('ipBtn').disabled = true;
+
+  let vtHtml = '', abuseHtml = '', verdictCls = 'unknown';
+
+  // VirusTotal
+  try {
+    const vt = await apiFetch(`/virustotal/ip/${encodeURIComponent(ip)}`);
+    const attr = vt.data?.attributes || {};
+    const stats = attr.last_analysis_stats || {};
+    const mal = stats.malicious || 0;
+    const sus = stats.suspicious || 0;
+    verdictCls = verdictClass(mal, sus);
+
+    vtHtml = `
+      <div class="result-box">
+        <div class="result-header">
+          <span class="result-title">VIRUSTOTAL — ${ip}</span>
+          <span class="verdict ${verdictCls}">${verdictLabel(mal, sus)}</span>
+        </div>
+        ${renderVTStats(stats)}
+        <div class="info-grid" style="margin-bottom:16px;">
+          <div class="info-row"><span class="info-key">País</span><span class="info-val">${attr.country || '—'}</span></div>
+          <div class="info-row"><span class="info-key">AS Owner</span><span class="info-val">${attr.as_owner || '—'}</span></div>
+          <div class="info-row"><span class="info-key">ASN</span><span class="info-val">${attr.asn || '—'}</span></div>
+          <div class="info-row"><span class="info-key">Reputación VT</span><span class="info-val" style="color:${(attr.reputation||0) < 0 ? 'var(--red)' : 'var(--green)'}">${attr.reputation ?? '—'}</span></div>
+        </div>
+        <div class="section-title">DETECCIONES POR MOTOR</div>
+        ${renderEngineTable(attr.last_analysis_results)}
+      </div>`;
+  } catch(e) {
+    vtHtml = `<div class="error-box">VT Error: ${e.message}</div>`;
+  }
+
+  // AbuseIPDB
+  try {
+    const abuse = await apiFetch(`/abuseipdb/check/${encodeURIComponent(ip)}`);
+    const d = abuse.data || {};
+    const score = d.abuseConfidenceScore || 0;
+    const abuseCls = score >= 75 ? 'malicious' : score >= 25 ? 'suspicious' : 'clean';
+    if (verdictCls === 'unknown') verdictCls = abuseCls;
+
+    abuseHtml = `
+      <div class="result-box">
+        <div class="result-header">
+          <span class="result-title">ABUSEIPDB — ${ip}</span>
+          <span class="verdict ${abuseCls}">${score >= 75 ? '⚠ ALTO RIESGO' : score >= 25 ? '⚡ RIESGO MEDIO' : '✔ LIMPIO'}</span>
+        </div>
+        <div class="risk-bar-wrap">
+          <div class="risk-bar-label">
+            <span>ABUSE CONFIDENCE SCORE</span>
+            <span style="color:${riskColor(score)};font-weight:700;">${score}%</span>
+          </div>
+          <div class="risk-bar-bg">
+            <div class="risk-bar-fill" style="width:${score}%;background:${riskColor(score)};"></div>
+          </div>
+        </div>
+        <div class="info-grid">
+          <div class="info-row"><span class="info-key">País</span><span class="info-val">${d.countryCode || '—'}</span></div>
+          <div class="info-row"><span class="info-key">ISP</span><span class="info-val">${d.isp || '—'}</span></div>
+          <div class="info-row"><span class="info-key">Dominio</span><span class="info-val">${d.domain || '—'}</span></div>
+          <div class="info-row"><span class="info-key">Total reportes</span><span class="info-val" style="color:${(d.totalReports||0) > 0 ? 'var(--red)' : 'var(--green)'}">${d.totalReports ?? '—'}</span></div>
+          <div class="info-row"><span class="info-key">Usuarios distintos</span><span class="info-val">${d.numDistinctUsers ?? '—'}</span></div>
+          <div class="info-row"><span class="info-key">Último reporte</span><span class="info-val">${d.lastReportedAt ? new Date(d.lastReportedAt).toLocaleDateString() : 'Nunca'}</span></div>
+          <div class="info-row"><span class="info-key">IP Tor</span><span class="info-val" style="color:${d.isTor ? 'var(--red)' : 'var(--green)'}">${d.isTor ? 'SÍ ⚠' : 'NO'}</span></div>
+          <div class="info-row"><span class="info-key">Uso</span><span class="info-val">${d.usageType || '—'}</span></div>
+        </div>
+      </div>`;
+  } catch(e) {
+    abuseHtml = `<div class="error-box">AbuseIPDB Error: ${e.message}</div>`;
+  }
+
+  addToHistory('ip', ip, verdictCls);
+  document.getElementById('ipResult').innerHTML = vtHtml + abuseHtml;
+  document.getElementById('ipBtn').disabled = false;
+}
+
+// ─── ANALYZE DOMAIN ──────────────────────────────────
+async function analyzeDomain() {
+  const domain = document.getElementById('domainInput').value.trim().replace(/^https?:\/\//,'').split('/')[0];
+  if (!domain) return;
+
+  setLoading('domainResult', `ANALIZANDO DOMINIO: ${domain}...`);
+  document.getElementById('domainBtn').disabled = true;
+
+  try {
+    const vt = await apiFetch(`/virustotal/domain/${encodeURIComponent(domain)}`);
+    const attr = vt.data?.attributes || {};
+    const stats = attr.last_analysis_stats || {};
+    const mal = stats.malicious || 0;
+    const sus = stats.suspicious || 0;
+    const verdictCls = verdictClass(mal, sus);
+
+    const cats = attr.categories ? Object.values(attr.categories).slice(0, 6) : [];
+    const tags = (attr.tags || []).slice(0, 8);
+
+    document.getElementById('domainResult').innerHTML = `
+      <div class="result-box">
+        <div class="result-header">
+          <span class="result-title">VIRUSTOTAL — ${domain}</span>
+          <span class="verdict ${verdictCls}">${verdictLabel(mal, sus)}</span>
+        </div>
+        ${renderVTStats(stats)}
+        <div class="info-grid" style="margin-bottom:16px;">
+          <div class="info-row"><span class="info-key">Registrador</span><span class="info-val">${attr.registrar || '—'}</span></div>
+          <div class="info-row"><span class="info-key">Reputación</span><span class="info-val" style="color:${(attr.reputation||0) < 0 ? 'var(--red)' : 'var(--green)'}">${attr.reputation ?? '—'}</span></div>
+          <div class="info-row"><span class="info-key">Creación</span><span class="info-val">${attr.creation_date ? new Date(attr.creation_date*1000).toLocaleDateString() : '—'}</span></div>
+          <div class="info-row"><span class="info-key">Expiración</span><span class="info-val">${attr.expiration_date ? new Date(attr.expiration_date*1000).toLocaleDateString() : '—'}</span></div>
+        </div>
+        ${cats.length ? `<div class="section-title">CATEGORÍAS</div><div style="margin-bottom:16px;">${cats.map(c=>`<span class="tag">${c}</span>`).join('')}</div>` : ''}
+        ${tags.length ? `<div class="section-title">TAGS</div><div style="margin-bottom:16px;">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>` : ''}
+        <div class="section-title">DETECCIONES POR MOTOR</div>
+        ${renderEngineTable(attr.last_analysis_results)}
+      </div>`;
+
+    addToHistory('domain', domain, verdictCls);
+  } catch(e) {
+    document.getElementById('domainResult').innerHTML = `<div class="error-box">Error: ${e.message}</div>`;
+  } finally {
+    document.getElementById('domainBtn').disabled = false;
+  }
+}
+
+// ─── ANALYZE URL ─────────────────────────────────────
+async function analyzeURL() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) return;
+
+  setLoading('urlResult', 'ENVIANDO URL A ANÁLISIS...');
+  document.getElementById('urlBtn').disabled = true;
+
+  try {
+    const submit = await apiFetch('/virustotal/url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+
+    const analysisId = submit.data?.id;
+    if (!analysisId) throw new Error('No se obtuvo ID de análisis');
+
+    document.getElementById('urlResult').innerHTML = `<div class="loader"><div class="spinner"></div>ANALIZANDO URL (puede tardar unos segundos)...</div>`;
+
+    let data, attempts = 0;
+    do {
+      await new Promise(r => setTimeout(r, 3000));
+      const res = await apiFetch(`/virustotal/analysis/${analysisId}`);
+      data = res.data;
+      attempts++;
+    } while (data?.attributes?.status !== 'completed' && attempts < 10);
+
+    if (data?.attributes?.status !== 'completed') throw new Error('El análisis tardó demasiado. Inténtalo de nuevo.');
+
+    const attr = data.attributes;
+    const stats = attr.stats || {};
+    const mal = stats.malicious || 0;
+    const sus = stats.suspicious || 0;
+    const verdictCls = verdictClass(mal, sus);
+
+    document.getElementById('urlResult').innerHTML = `
+      <div class="result-box">
+        <div class="result-header">
+          <span class="result-title" style="word-break:break-all;max-width:70%">${url.length > 60 ? url.slice(0,60)+'...' : url}</span>
+          <span class="verdict ${verdictCls}">${verdictLabel(mal, sus)}</span>
+        </div>
+        ${renderVTStats(stats)}
+        <div class="section-title">DETECCIONES POR MOTOR</div>
+        ${renderEngineTable(attr.results)}
+      </div>`;
+
+    addToHistory('url', url, verdictCls);
+  } catch(e) {
+    document.getElementById('urlResult').innerHTML = `<div class="error-box">Error: ${e.message}</div>`;
+  } finally {
+    document.getElementById('urlBtn').disabled = false;
+  }
+}
+
+</script>
+</body>
+</html>
