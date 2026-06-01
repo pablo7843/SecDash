@@ -1,6 +1,7 @@
 const express     = require('express');
 const router      = express.Router();
 const abuseClient = require('../clients/abuseipdb');
+const cache       = require('../utils/cache');
 
 function handleAbuseError(err, res) {
   if (err.response) {
@@ -15,23 +16,23 @@ function handleAbuseError(err, res) {
 }
 
 // ── GET /api/abuseipdb/check/:ip ─────────────────────
-// Comprueba la reputación de una IP
 router.get('/check/:ip', async (req, res) => {
   const { ip } = req.params;
 
-  const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-  if (!ipRegex.test(ip)) {
-    return res.status(400).json({ error: 'Formato de IP inválido.' });
+  const ipv4Re = /^(\d{1,3}\.){3}\d{1,3}$/;
+  if (!ipv4Re.test(ip)) {
+    return res.status(400).json({ error: 'Formato de IP inválido (solo IPv4 soportado por AbuseIPDB).' });
   }
+
+  const key = `abuse:ip:${ip}`;
+  const cached = cache.get(key);
+  if (cached) return res.json(cached);
 
   try {
     const { data } = await abuseClient.get('/check', {
-      params: {
-        ipAddress:     ip,
-        maxAgeInDays:  90,
-        verbose:       true,
-      },
+      params: { ipAddress: ip, maxAgeInDays: 90, verbose: true },
     });
+    cache.set(key, data);
     res.json(data);
   } catch (err) {
     handleAbuseError(err, res);

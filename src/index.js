@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path       = require('path');
 const express    = require('express');
 const cors       = require('cors');
 const rateLimit  = require('express-rate-limit');
@@ -29,12 +30,12 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 
-// ── ROUTES ────────────────────────────────────────────
+// ── API ROUTES ────────────────────────────────────────
 
 app.use('/api/virustotal', vtRouter);
 app.use('/api/abuseipdb',  abuseRouter);
 
-// Health check — Koyeb lo usa para saber si el servicio está vivo
+// Health check — compatible con Docker y Koyeb
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
@@ -46,12 +47,18 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// 404
-app.use((_req, res) => {
-  res.status(404).json({ error: 'Endpoint no encontrado.' });
+// ── STATIC FRONTEND ───────────────────────────────────
+// El backend sirve el frontend — abre http://localhost:3000 directamente
+
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Catch-all: devuelve index.html para cualquier ruta no-API
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
-// Error handler global
+// ── ERROR HANDLER ─────────────────────────────────────
+
 app.use((err, _req, res, _next) => {
   console.error('[ERROR]', err.message);
   res.status(500).json({ error: 'Error interno del servidor.' });
@@ -61,11 +68,11 @@ app.use((err, _req, res, _next) => {
 
 app.listen(PORT, () => {
   console.log(`
-╔══════════════════════════════════════╗
-║       SECDASH BACKEND — ONLINE       ║
-╠══════════════════════════════════════╣
-║  Port     : ${PORT}                      
-║  VT Key   : ${process.env.VIRUSTOTAL_API_KEY ? '✔ configurada' : '✘ falta'}           
-║  Abuse Key: ${process.env.ABUSEIPDB_API_KEY  ? '✔ configurada' : '✘ falta'}           
-╚══════════════════════════════════════╝`);
+╔══════════════════════════════════════════════╗
+║           SECDASH BACKEND — ONLINE           ║
+╠══════════════════════════════════════════════╣
+║  URL      : http://localhost:${PORT}              ║
+║  VT Key   : ${process.env.VIRUSTOTAL_API_KEY ? '✔ configurada               ║' : '✘ FALTA — añádela al .env  ║'}
+║  Abuse Key: ${process.env.ABUSEIPDB_API_KEY  ? '✔ configurada               ║' : '✘ FALTA — añádela al .env  ║'}
+╚══════════════════════════════════════════════╝`);
 });

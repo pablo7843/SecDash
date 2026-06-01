@@ -1,8 +1,8 @@
 const express  = require('express');
 const router   = express.Router();
 const vtClient = require('../clients/virustotal');
+const cache    = require('../utils/cache');
 
-// Helper — transforma errores de Axios en respuestas claras
 function handleVTError(err, res) {
   if (err.response) {
     const status = err.response.status;
@@ -16,18 +16,22 @@ function handleVTError(err, res) {
 }
 
 // ── GET /api/virustotal/ip/:ip ────────────────────────
-// Analiza una dirección IP
 router.get('/ip/:ip', async (req, res) => {
   const { ip } = req.params;
 
-  // Validación básica de IP
-  const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-  if (!ipRegex.test(ip)) {
-    return res.status(400).json({ error: 'Formato de IP inválido.' });
+  const ipv4Re = /^(\d{1,3}\.){3}\d{1,3}$/;
+  const ipv6Re = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
+  if (!ipv4Re.test(ip) && !ipv6Re.test(ip)) {
+    return res.status(400).json({ error: 'Formato de IP inválido (IPv4 o IPv6).' });
   }
+
+  const key = `vt:ip:${ip}`;
+  const cached = cache.get(key);
+  if (cached) return res.json(cached);
 
   try {
     const { data } = await vtClient.get(`/ip_addresses/${ip}`);
+    cache.set(key, data);
     res.json(data);
   } catch (err) {
     handleVTError(err, res);
@@ -35,19 +39,21 @@ router.get('/ip/:ip', async (req, res) => {
 });
 
 // ── GET /api/virustotal/domain/:domain ───────────────
-// Analiza un dominio
 router.get('/domain/:domain', async (req, res) => {
   const { domain } = req.params;
-
-  // Limpieza básica — quitar http:// y path
   const clean = domain.replace(/^https?:\/\//,'').split('/')[0];
 
   if (!clean || clean.length < 3) {
     return res.status(400).json({ error: 'Dominio inválido.' });
   }
 
+  const key = `vt:domain:${clean}`;
+  const cached = cache.get(key);
+  if (cached) return res.json(cached);
+
   try {
     const { data } = await vtClient.get(`/domains/${clean}`);
+    cache.set(key, data);
     res.json(data);
   } catch (err) {
     handleVTError(err, res);
@@ -55,10 +61,8 @@ router.get('/domain/:domain', async (req, res) => {
 });
 
 // ── POST /api/virustotal/url ──────────────────────────
-// Envía una URL a escaneo y devuelve el analysis ID
 router.post('/url', async (req, res) => {
   const { url } = req.body;
-
   if (!url || typeof url !== 'string') {
     return res.status(400).json({ error: 'URL no proporcionada.' });
   }
@@ -75,12 +79,32 @@ router.post('/url', async (req, res) => {
 });
 
 // ── GET /api/virustotal/analysis/:id ─────────────────
-// Consulta el resultado de un análisis (polling desde el frontend)
 router.get('/analysis/:id', async (req, res) => {
   const { id } = req.params;
-
   try {
     const { data } = await vtClient.get(`/analyses/${id}`);
+    res.json(data);
+  } catch (err) {
+    handleVTError(err, res);
+  }
+});
+
+// ── GET /api/virustotal/hash/:hash ───────────────────
+// Analiza un fichero por MD5 (32), SHA-1 (40) o SHA-256 (64) hex
+router.get('/hash/:hash', async (req, res) => {
+  const { hash } = req.params;
+  const validHash = /^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$/.test(hash);
+  if (!validHash) {
+    return res.status(400).json({ error: 'Hash inválido. Use MD5 (32), SHA-1 (40) o SHA-256 (64) caracteres hex.' });
+  }
+
+  const key = `vt:hash:${hash.toLowerCase()}`;
+  const cached = cache.get(key);
+  if (cached) return res.json(cached);
+
+  try {
+    const { data } = await vtClient.get(`/files/${hash}`);
+    cache.set(key, data);
     res.json(data);
   } catch (err) {
     handleVTError(err, res);

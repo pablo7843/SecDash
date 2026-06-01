@@ -17,6 +17,7 @@ WORKDIR /app
 # Solo copiamos lo necesario del build stage
 COPY --from=builder /app/node_modules ./node_modules
 COPY src/ ./src/
+COPY public/ ./public/
 COPY package.json ./
 
 USER appuser
